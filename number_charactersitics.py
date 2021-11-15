@@ -1,3 +1,4 @@
+import math
 from utils import get_pivot
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
@@ -21,6 +22,7 @@ print(f'average: {average}')
 print(f'count: {total_count}')
 print(f'variance: {variance}')
 
+initial_partitions = rdd.getNumPartitions()
 left_count = 0
 right_count = 0
 current_minimum = minimum
@@ -55,11 +57,15 @@ while True:
             break
         # check we have the correct side rdd, or if median is on the other side
         elif left_count + count > total_count / 2:
-            rdd = left_rdd.cache()
+            rdd = left_rdd.coalesce(
+                math.ceil(initial_partitions * (count / total_count))
+            ).cache()
             right_count = total_count - left_count - count
             current_maximum = rdd.max()
         else:
-            rdd = rdd.filter(lambda x: x >= pivot).cache()
+            rdd = rdd.filter(lambda x: x >= pivot).coalesce(
+                math.ceil(initial_partitions * (count / total_count))
+            ).cache()
             left_count += count
             current_minimum = rdd.min()
     elif direction == "right":
@@ -81,11 +87,15 @@ while True:
             break
         # check we have the correct side rdd, or if median is on the other side
         elif right_count + count > total_count / 2:
-            rdd = right_rdd.cache()
+            rdd = right_rdd.coalesce(
+                math.ceil(initial_partitions * (count / total_count))
+            ).cache()
             left_count = total_count - right_count - count
             current_minimum = rdd.min()
         else:
-            rdd = rdd.filter(lambda x: x <= pivot).cache()
+            rdd = rdd.filter(lambda x: x <= pivot).coalesce(
+                math.ceil(initial_partitions * (count / total_count))
+            ).cache()
             right_count += count
             current_maximum = right_rdd.max()
 

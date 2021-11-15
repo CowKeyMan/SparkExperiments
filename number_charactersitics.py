@@ -9,8 +9,6 @@ sc = spark.sparkContext
 
 rdd = spark.sparkContext.textFile("numbers_random.txt").map(float)
 
-# print(np.median(rdd.collect()))
-
 minimum = rdd.min()
 maximum = rdd.max()
 average = rdd.mean()
@@ -28,15 +26,13 @@ right_count = 0
 current_minimum = minimum
 current_maximum = maximum
 while True:
-    if count > 10000:
-        sample = rdd.sample(False, 10000 / count)
-    else:
-        sample = rdd.sample(False, 1)
+    sample = rdd.sample(False, min(10000 / count, 1))
     if current_minimum == current_maximum:
         median = current_minimum
         break
     step = (current_maximum - current_minimum) / 10
-    hist_range = [current_minimum + x * step for x in range(0, 12)]
+    hist_range = [current_minimum + x * step for x in range(0, 11)]
+    hist_range[-1] = current_maximum
     hist = sample.histogram(hist_range)
     a = get_pivot(total_count, left_count, right_count, hist)
     pivot, direction = get_pivot(total_count, left_count, right_count, hist)

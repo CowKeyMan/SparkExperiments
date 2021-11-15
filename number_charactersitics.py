@@ -63,7 +63,7 @@ while True:
             left_count += count
             current_minimum = rdd.min()
     elif direction == "right":
-        right_rdd = rdd.filter(lambda x: x >= pivot).cache()
+        right_rdd = rdd.filter(lambda x: x >= pivot)
         count = right_rdd.count()
         # check if we are finished
         if right_count + count == total_count - right_count - count:

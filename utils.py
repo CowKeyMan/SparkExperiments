@@ -1,16 +1,14 @@
-import numpy as np
-
-
 def get_pivot(total_count, left_count, right_count, hist):
     true_mid = total_count / 2
-    bucket_points = np.array(hist[0])
-    bucket_counts = np.array(hist[1])
+    bucket_points = hist[0]
+    bucket_counts = hist[1]
     sample_count = sum(bucket_counts)
     if sample_count == 0:
         return bucket_points[round(len(bucket_points) / 2)], "left"
-    bucket_counts = \
-        bucket_counts / sample_count \
-        * (total_count - left_count - right_count)
+    bucket_counts = [
+        x / sample_count * (total_count - left_count - right_count)
+        for x in bucket_counts
+    ]
     predicted_counts = left_count
     for i, bc in enumerate(bucket_counts):
         next_count = predicted_counts + bucket_counts[i]

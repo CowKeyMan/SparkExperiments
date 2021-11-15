@@ -1,5 +1,4 @@
 from utils import get_pivot
-import numpy as np
 from pyspark import SparkConf
 from pyspark.sql import SparkSession
 
@@ -33,13 +32,11 @@ while True:
         sample = rdd.sample(False, 10000 / count)
     else:
         sample = rdd.sample(False, 1)
-    step = (current_maximum - current_minimum) / 10
     if current_minimum == current_maximum:
         median = current_minimum
         break
-    hist_range = list(
-        np.arange(current_minimum, current_maximum + step, step)
-    )
+    step = (current_maximum - current_minimum) / 10
+    hist_range = [current_minimum + x * step for x in range(0, 12)]
     hist = sample.histogram(hist_range)
     a = get_pivot(total_count, left_count, right_count, hist)
     pivot, direction = get_pivot(total_count, left_count, right_count, hist)

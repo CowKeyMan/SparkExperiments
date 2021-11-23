@@ -43,7 +43,7 @@ while True:
         count = left_rdd.count()
         # check if we are finished
         if left_count + count == total_count - left_count - count:
-            right_rdd = rdd.filter(lambda x: x >= pivot)
+            right_rdd = rdd.filter(lambda x: x > pivot)
             left = left_rdd.max()
             right = right_rdd.min()
             median = (left + right) / 2
@@ -51,8 +51,8 @@ while True:
         elif left_count + count == total_count - left_count - count + 1:
             median = left_rdd.max()
             break
-        elif left_count + count == total_count - left_count - 1:
-            right_rdd = rdd.filter(lambda x: x >= pivot)
+        elif left_count + count == total_count - left_count - count - 1:
+            right_rdd = rdd.filter(lambda x: x > pivot)
             median = right_rdd.min()
             break
         # check we have the correct side rdd, or if median is on the other side
@@ -63,13 +63,13 @@ while True:
             right_count = total_count - left_count - count
             current_maximum = rdd.max()
         else:
-            rdd = rdd.filter(lambda x: x >= pivot).coalesce(
+            rdd = rdd.filter(lambda x: x > pivot).coalesce(
                 math.ceil(initial_partitions * (count / total_count))
             ).cache()
             left_count += count
             current_minimum = rdd.min()
     elif direction == "right":
-        right_rdd = rdd.filter(lambda x: x >= pivot)
+        right_rdd = rdd.filter(lambda x: x > pivot)
         count = right_rdd.count()
         # check if we are finished
         if right_count + count == total_count - right_count - count:
@@ -81,7 +81,7 @@ while True:
         elif right_count + count == total_count - right_count - count + 1:
             median = right_rdd.min()
             break
-        elif right_count + count == total_count - right_count - 1:
+        elif right_count + count == total_count - right_count - count - 1:
             left_rdd = rdd.filter(lambda x: x <= pivot)
             median = left_rdd.max()
             break

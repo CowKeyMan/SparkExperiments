@@ -29,10 +29,14 @@ left_rdd = right_rdd.filter(lambda x: x <= average + sd)
 right_count = count - left_rdd.count() - left_count
 rdd = left_rdd
 
-initial_partitions = rdd.getNumPartitions()
+current_partitions = initial_partitions = rdd.getNumPartitions()
 current_minimum = rdd.min()
 current_maximum = rdd.max()
 while True:
+    new_partitions = math.ceil(initial_partitions * (count / total_count))
+    if current_partitions >= new_partitions * 10:
+        rdd = rdd.repartition(new_partitions).cache()
+        current_partitions = new_partitions
     sample = rdd.sample(False, min(10000 / count, 1))
     if current_minimum == current_maximum:
         median = current_minimum
@@ -62,15 +66,11 @@ while True:
             break
         # check we have the correct side rdd, or if median is on the other side
         elif left_count + count > total_count / 2:
-            rdd = left_rdd.coalesce(
-                math.ceil(initial_partitions * (count / total_count))
-            ).cache()
+            rdd = left_rdd.cache()
             right_count = total_count - left_count - count
             current_maximum = rdd.max()
         else:
-            rdd = rdd.filter(lambda x: x > pivot).coalesce(
-                math.ceil(initial_partitions * (count / total_count))
-            ).cache()
+            rdd = rdd.filter(lambda x: x > pivot).cache()
             left_count += count
             current_minimum = rdd.min()
     elif direction == "right":
@@ -92,15 +92,11 @@ while True:
             break
         # check we have the correct side rdd, or if median is on the other side
         elif right_count + count > total_count / 2:
-            rdd = right_rdd.coalesce(
-                math.ceil(initial_partitions * (count / total_count))
-            ).cache()
+            rdd = right_rdd.cache()
             left_count = total_count - right_count - count
             current_minimum = rdd.min()
         else:
-            rdd = rdd.filter(lambda x: x <= pivot).coalesce(
-                math.ceil(initial_partitions * (count / total_count))
-            ).cache()
+            rdd = rdd.filter(lambda x: x <= pivot).cache()
             right_count += count
             current_maximum = right_rdd.max()
 

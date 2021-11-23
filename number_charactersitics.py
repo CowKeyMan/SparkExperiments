@@ -15,6 +15,7 @@ maximum = rdd.max()
 average = rdd.mean()
 count = total_count = rdd.count()
 variance = rdd.variance()
+sd = math.sqrt(variance)
 
 print(f'minimum: {minimum}')
 print(f'maximum: {maximum}')
@@ -22,11 +23,15 @@ print(f'average: {average}')
 print(f'count: {total_count}')
 print(f'variance: {variance}')
 
+right_rdd = rdd.filter(lambda x: x >= average - sd)
+left_count = count - right_rdd.count()
+left_rdd = right_rdd.filter(lambda x: x <= average + sd)
+right_count = count - left_rdd.count() - left_count
+rdd = left_rdd
+
 initial_partitions = rdd.getNumPartitions()
-left_count = 0
-right_count = 0
-current_minimum = minimum
-current_maximum = maximum
+current_minimum = rdd.min()
+current_maximum = rdd.max()
 while True:
     sample = rdd.sample(False, min(10000 / count, 1))
     if current_minimum == current_maximum:

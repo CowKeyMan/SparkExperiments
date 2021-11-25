@@ -1,27 +1,38 @@
 import math
 from utils import get_pivot
-from pyspark import SparkConf
-from pyspark.sql import SparkSession
+from pyspark import SparkContext, SparkConf
 
 
-spark = SparkSession.builder.appName("Spark").getOrCreate()
-conf = SparkConf()
-sc = spark.sparkContext
+dataset = "/wrk/group/grp-ddi-2021/datasets/data-1.txt"
+conf = (
+    SparkConf()
+    .setAppName("danicau")
+    .setMaster("spark://ukko2-10.local.cs.helsinki.fi:7077")
+    .set("spark.cores.max", "10")
+    .set("spark.rdd.compress", "true")
+    .set("spark.broadcast.compress", "true")
+)
+sc = SparkContext(conf=conf)
 
-rdd = spark.sparkContext.textFile("numbers_random.txt").map(float)
+rdd = sc.textFile(dataset).map(float).cache()
 
 minimum = rdd.min()
-maximum = rdd.max()
-average = rdd.mean()
-count = total_count = rdd.count()
-variance = rdd.variance()
-sd = math.sqrt(variance)
-
 print(f'minimum: {minimum}')
+
+maximum = rdd.max()
 print(f'maximum: {maximum}')
+
+average = rdd.mean()
 print(f'average: {average}')
+
+count = total_count = rdd.count()
 print(f'count: {total_count}')
+
+variance = rdd.variance()
 print(f'variance: {variance}')
+
+# median calculation
+sd = math.sqrt(variance)
 
 right_rdd = rdd.filter(lambda x: x >= average - sd)
 left_count = count - right_rdd.count()
@@ -37,14 +48,13 @@ while True:
     if current_partitions >= new_partitions * 10:
         rdd = rdd.repartition(new_partitions).cache()
         current_partitions = new_partitions
-    sample = rdd.sample(False, min(10000 / count, 1))
     if current_minimum == current_maximum:
         median = current_minimum
         break
     step = (current_maximum - current_minimum) / 10
     hist_range = [current_minimum + x * step for x in range(0, 11)]
     hist_range[-1] = current_maximum
-    hist = sample.histogram(hist_range)
+    hist = rdd.histogram(hist_range)
     a = get_pivot(total_count, left_count, right_count, hist)
     pivot, direction = get_pivot(total_count, left_count, right_count, hist)
     if direction == "left":

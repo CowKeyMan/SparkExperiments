@@ -3,6 +3,7 @@ title: "Distributed Data Infrastructures - Project 1"
 author: "Daniel Cauchi (015544014)"
 output: pdf_document
 bibliography: references.bib
+csl: ieee.csl
 ---
 
 This document will explain how I solved each of the problems described in the project specifications.
@@ -37,42 +38,54 @@ What is the value of the median of the data set? You should provide the exact me
 
 Before answering this question, I will describe the process taken to solve it.
 
-Firstly, we use the theorem that says the median must be one standard deviation away from the mean @median. From the functions in Problem 1, we know the mean and variance, from which we can extract the standard deviation. Hence, the first step is to filter out the values which are not within this range, using \textit{rdd.filter(lambda x: x >= average - sd)} and \textit{rdd.filter(lambda x: x <= average + sd)}. Hence, if our list was sorted, we would have the following diagram:
+Firstly, we use the theorem that says the median must be one standard deviation away from the mean @median. From the functions in Problem 1, we know the mean and variance, from which we can extract the standard deviation. Hence, the first step is to filter out the values which are not within this range, using \textit{rdd.filter(lambda x: x >= average - sd)} and \textit{rdd.filter(lambda x: x <= average + sd)}. Hence, if our list was sorted, we would have a diagram such as Figure \ref{fig:sd}.
 
-![Result after removing elements which are not within one standard deviation of the mean](images/removing_one_sd.png)
+\begin{figure}
+   \includegraphics{images/removing_one_sd.png}
+   \caption{Result after removing elements which are not within one standard deviation of the mean}
+   \label{fig:sd}
+\end{figure}
 
 Through this, we eliminate a lot of values, hence narrowing furter into our median. We calculate the current minimum and maximum of the remaining elements so that they are used in the next step.
 
-The next step is to divide them into a histogram which is evenly split into 10 bins between the \textit{current\_minimum} and \textit{current\_maximum} in order to study the distribution of our data. It was earlier tried to take a small random sample from the remaining numbers using \textit{rdd.sample(fraction)} and apply the histogram on this, however, this provided no speedup benefit. From this step, we may get a histogram like the following:
+The next step is to divide the remaining numbers into a histogram which is evenly split into 10 bins between the \textit{current\_minimum} and \textit{current\_maximum} in order to study the distribution of our data. The numbers '10' was arbitrarily chosen. It was earlier tried to take a small random sample from the remaining numbers using \textit{rdd.sample(fraction)} and apply the histogram on this, however, this provided no speedup benefit. From this step, we may get a histogram like Figure \ref{fig:histogram}.
 
-![Histogram of small random sample](images/histogram.png)
+\begin{figure}
+   \includegraphics{images/histogram.png}
+   \caption{histogram of small random sample}
+   \label{fig:histogram}
+\end{figure}
 
-The left and right ghost columns represent the left\_count and right\_count we had earlier when we removed the values one standard deviation away from the mean. We chose a pivot based on this histogram, and also based on this histogram, we filter so that we try to get most values from the distribution, so that our median falls within the remaining elements.
+The left and right ghost columns represent the left\_count and right\_count we had earlier when we removed the values one standard deviation away from the mean. We chose a pivot based on this histogram. Then, we filter so that we try to get most values from the distribution, so that our median falls within the remaining elements.
 
 Lets say for example that in this case we decide to remove all values right of the pivot. The remaining elements will be those on the left.
 
-* If the \textit{number of elements on the left + left\_count > number of elements on the right + right\_count}, then we do \textit{right\_count += number of elements on the right} and continue
+* If the \textit{number of elements on the left + left\_count > number of elements on the right + right\_count}:
+  * Then we do \textit{right\_count += number of elements on the right} and continue
 
-* Else, we filter again on the pivot, but this time only leave items which lie on the right, do \textit{left\_count += number of elements on the left} and continue
+* Else:
+  * We filter again on the pivot, but this time only leave items which lie on the right, do \textit{left\_count += number of elements on the left} and continue
 
 After this step we go back to histogramming the remaining elements.
 
-There are 2 exit conditions:
+There are 2 exit conditions which we check after removing elements to one side of the pivot:
 
 * The left\_count and right\_count are equal
-  * In this case we take do \textit{median = (max(left\_side) + min(right\_side)) / 2}
-* The left\_side is 1 element bigger than the right\_side
+  * In this case we return \textit{median = (max(left\_side) + min(right\_side)) / 2}
+* The left\_side has 1 more element than the right\_side
   * In this case the \textit{median = max(left\_side)}
-* The right\_side is 1 element bigger than the left\_side
+* The right\_side has 1 more element than the left\_side
   * In this case the \textit{median = min(right\_side)}
 
 In our case we have exactly 1 billion elements, so we techincally only have the first exit condition.
 
-Based on this algorithm, this was my answer:
+Based on this algorithm, this was the returned median:
 
 * median: 42.0233594627
 
-Note: Other optimizations were made in the codebase, such as caching results from heavy processes such as mapping strings to integers and repartitioning the RDD after a significant amount items have been filtered our.
+The total running time for this was 56 minutes, based on a single instance, on 10 cores, and when other processes were also running on the cluster.
+
+Note: Other optimizations were made in the codebase, such as caching results from heavy processes such as mapping strings to integers, and repartitioning the RDD after a significant amount items have been filtered out. The partitioning was made when less than 10x the original elements remained in the set of numbers considered.
 
 \newpage
 # Problem 3
@@ -87,7 +100,7 @@ To achieve step 1, we would need to map each element in our list to a tuple \tex
 
 To get the maximum count, we can do: \textit{rdd.max(key=lambda x: x[1]))}, where x is our tuple.
 
-Lastly, we can filter out all elements whose values are not equal to the maximum using \textit{rdd.filter(lambda x: x[1] == maximum\_count)} and then removing the value by doing: \textit{rdd.map(lambda x: x[0])} and then collecting the values.
+Lastly, we can filter out all elements whose values are not equal to the maximum using \textit{rdd.filter(lambda x: x[1] == maximum\_count)} and then removing the value such that only the elements/keys remain, by doing: \textit{rdd.map(lambda x: x[0])} and then collecting the remaining elements.
 
 \newpage
 # References

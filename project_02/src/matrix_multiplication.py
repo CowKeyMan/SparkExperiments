@@ -37,7 +37,6 @@ A = A.cache()
 
 # Calcualte A x A.T
 AxAt = sc.parallelize([])
-A_iterator = A.values().toLocalIterator()
 for i in range(number_of_rows):
     row = A.lookup(i)[0]
     rdd_row = A.map(

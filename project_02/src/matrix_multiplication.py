@@ -3,7 +3,7 @@ from pyspark.sql import SparkSession
 
 spark = SparkSession.builder.appName("danicau").getOrCreate()
 dataset = 'random_matrix.txt'
-dataset = 'simple_matrix.txt'
+# dataset = 'simple_matrix.txt'
 sc = spark.sparkContext
 
 
@@ -20,6 +20,9 @@ def pair_rdd_to_same_key(key, pair_rdd):
 
 def pair_rdd_to_tuple(key, pair_rdd):
     return pair_rdd_to_same_key(key, pair_rdd).groupByKey().mapValues(list)
+    # The following may be necessary in case groupByKey does not retain order
+    # lst = pair_rdd_to_same_key(key, pair_rdd).values().collect()
+    # return sc.parallelize([(key, lst)])
 
 
 # Get A
@@ -68,8 +71,12 @@ for i, row in enumerate(AxAt_iterator):
 # matrix = np.matrix(A.values().collect())
 # matrix_mul = matrix @ matrix.T
 # r = AxAt.values().collect()
+# r = np.round(r, 2)
+# matrix_mul = np.round(matrix_mul, 2)
 # print(np.all(r == matrix_mul))
 
 # matrix_mul = matrix @ matrix.T @ matrix
 # r = AxAtxA.values().collect()
+# r = np.round(r, 2)
+# matrix_mul = np.round(matrix_mul, 2)
 # print(np.all(r == matrix_mul))

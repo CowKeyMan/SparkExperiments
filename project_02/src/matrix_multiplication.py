@@ -28,14 +28,16 @@ def pair_rdd_to_tuple(key, pair_rdd):
 A = sc.parallelize([])
 number_of_rows = 0
 with open(dataset, 'r') as f:
+    rows = []
     for i, line in enumerate(f):
         row = [(i, line_to_float_list(line))]
-        A = A.union(sc.parallelize(row))
+        rows.append(sc.parallelize(row))
         number_of_rows += 1
-A = A.cache()
+A = sc.union(rows).cache()
 
 # Calcualte A x A.T
 AxAt = sc.parallelize([])
+rows = []
 for i in range(number_of_rows):
     row = A.lookup(i)[0]
     rdd_row = A.map(
@@ -45,8 +47,8 @@ for i in range(number_of_rows):
         )
     )
     rdd_row = pair_rdd_to_tuple(i, rdd_row)
-    AxAt = AxAt.union(rdd_row)
-AxAt = AxAt.cache()
+    rows.append(rdd_row)
+AxAt = sc.union(rows).cache()
 
 # Calcualte A x A.T x A
 AxAtxA = sc.parallelize([])

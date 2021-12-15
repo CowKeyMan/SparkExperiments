@@ -66,17 +66,6 @@ for i, row in enumerate(AxAt_iterator):
     )
     AxAtxA = AxAtxA.union(rdd_row)
 
-# checking code
-# import numpy as np
-# matrix = np.matrix(A.values().collect())
-# matrix_mul = matrix @ matrix.T
-# r = AxAt.values().collect()
-# r = np.round(r, 2)
-# matrix_mul = np.round(matrix_mul, 2)
-# print(np.all(r == matrix_mul))
-
-# matrix_mul = matrix @ matrix.T @ matrix
-# r = AxAtxA.values().collect()
-# r = np.round(r, 2)
-# matrix_mul = np.round(matrix_mul, 2)
-# print(np.all(r == matrix_mul))
+# checking
+# from checking import check
+# check(dataset, AxAtxA.values().collect())

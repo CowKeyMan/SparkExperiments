@@ -19,10 +19,9 @@ def pair_rdd_to_same_key(key, pair_rdd):
 
 
 def pair_rdd_to_tuple(key, pair_rdd):
-    return pair_rdd_to_same_key(key, pair_rdd).groupByKey().mapValues(list)
     # The following may be necessary in case groupByKey does not retain order
-    # lst = pair_rdd_to_same_key(key, pair_rdd).values().collect()
-    # return sc.parallelize([(key, lst)])
+    lst = pair_rdd_to_same_key(key, pair_rdd).values().collect()
+    return sc.parallelize([(key, lst)])
 
 
 # Get A

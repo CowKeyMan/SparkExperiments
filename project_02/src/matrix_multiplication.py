@@ -14,8 +14,16 @@ def line_to_float_list(line: str):
     return line
 
 
-A = sc.parallelize([])
+def pair_rdd_to_same_key(key, pair_rdd):
+    return pair_rdd.map(lambda k_v: (key, k_v[1]))
 
+
+def pair_rdd_to_tuple(key, pair_rdd):
+    return pair_rdd_to_same_key(key, pair_rdd).groupByKey().mapValues(list)
+
+
+# Get A
+A = sc.parallelize([])
 number_of_rows = 0
 with open(dataset, 'r') as f:
     for i, line in enumerate(f):
@@ -23,10 +31,11 @@ with open(dataset, 'r') as f:
         A = A.union(sc.parallelize(row))
         number_of_rows += 1
 
+number_of_columns = len(row)
 A = A.cache()
 
+# Calcualte A x A.T
 AxAt = sc.parallelize([])
-
 with open(dataset, 'r') as f:
     for i, line in enumerate(f):  # TODO: try iterating rdd instead
         row = line_to_float_list(line)
@@ -36,22 +45,38 @@ with open(dataset, 'r') as f:
                 sum([element * row[i] for i, element in enumerate(k_v[1])])
             )
         )
-        rdd_row = rdd_row.values()
-        # AxAt = AxAt.union(sc.parallelize([(i, rdd_row.collect())]))
+        rdd_row = pair_rdd_to_tuple(i, rdd_row)
         AxAt = AxAt.union(rdd_row)
 
-# SO FAR SO GOOD, we have AxAt
+# Calcualte A x A.T x A
+AxAtxA = sc.parallelize([])
+AxAt_iterator = AxAt.values().toLocalIterator()
+for i, row in enumerate(AxAt_iterator):
+    rdd_row = A.map(
+        lambda k_v: (
+            k_v[0],
+            [element * row[k_v[0]] for element in k_v[1]]
+        )
+    )
+    rdd_row = pair_rdd_to_same_key(i, rdd_row)
+    rdd_row = rdd_row.reduceByKey(
+        lambda l1, l2:
+        [a + b for a, b in zip(l1, l2)]
+    )
+    AxAtxA = AxAtxA.union(rdd_row)
 
-# Possibility: use toLocalIterator to get row by row for matrix multiplication
+# checking code
+# import numpy as np
+# matrix = np.matrix(A.values().collect())
+# matrix_mul = matrix @ matrix.T
+# print(matrix_mul)
+# # r = np.matrix(AxAt.values().collect())
+# r = AxAt.values().collect()
+# print(r)
+# print(np.all(r == matrix_mul))
 
-import numpy as np
-matrix = np.matrix(A.values().collect())
-matrix_mul = matrix @ matrix.T
-print(matrix_mul)
-
-
-# r = np.matrix(AxAt.values().collect())
-r = AxAt.collect()
-print(r)
-
-print(r == matrix_mul)
+# matrix_mul = matrix @ matrix.T @ matrix
+# r = AxAtxA.values().collect()
+# print(r)
+# print(r)
+# print(np.all(r == matrix_mul))

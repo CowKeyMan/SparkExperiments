@@ -30,23 +30,21 @@ with open(dataset, 'r') as f:
         row = [(i, line_to_float_list(line))]
         A = A.union(sc.parallelize(row))
         number_of_rows += 1
-
-number_of_columns = len(row)
 A = A.cache()
 
 # Calcualte A x A.T
 AxAt = sc.parallelize([])
-with open(dataset, 'r') as f:
-    for i, line in enumerate(f):  # TODO: try iterating rdd instead
-        row = line_to_float_list(line)
-        rdd_row = A.map(
-            lambda k_v: (
-                k_v[0],
-                sum([element * row[i] for i, element in enumerate(k_v[1])])
-            )
+A_iterator = A.values().toLocalIterator()
+for i, row in enumerate(A_iterator):
+    rdd_row = A.map(
+        lambda k_v: (
+            k_v[0],
+            sum([element * row[i] for i, element in enumerate(k_v[1])])
         )
-        rdd_row = pair_rdd_to_tuple(i, rdd_row)
-        AxAt = AxAt.union(rdd_row)
+    )
+    rdd_row = pair_rdd_to_tuple(i, rdd_row)
+    AxAt = AxAt.union(rdd_row)
+AxAt = AxAt.cache()
 
 # Calcualte A x A.T x A
 AxAtxA = sc.parallelize([])
@@ -69,14 +67,9 @@ for i, row in enumerate(AxAt_iterator):
 # import numpy as np
 # matrix = np.matrix(A.values().collect())
 # matrix_mul = matrix @ matrix.T
-# print(matrix_mul)
-# # r = np.matrix(AxAt.values().collect())
 # r = AxAt.values().collect()
-# print(r)
 # print(np.all(r == matrix_mul))
 
 # matrix_mul = matrix @ matrix.T @ matrix
 # r = AxAtxA.values().collect()
-# print(r)
-# print(r)
 # print(np.all(r == matrix_mul))

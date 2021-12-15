@@ -8,7 +8,6 @@ sc = spark.sparkContext
 
 
 def line_to_float_list(line: str):
-    line = line[:-1]  # remove \n
     line = line.split()
     line = [float(x) for x in line]
     return line
@@ -25,15 +24,10 @@ def pair_rdd_to_tuple(key, pair_rdd):
 
 
 # Get A
-A = sc.parallelize([])
-number_of_rows = 0
-with open(dataset, 'r') as f:
-    rows = []
-    for i, line in enumerate(f):
-        row = [(i, line_to_float_list(line))]
-        rows.append(sc.parallelize(row))
-        number_of_rows += 1
-A = sc.union(rows).cache()
+A = sc.textFile(dataset).map(lambda line: line_to_float_list(line))
+A = A.zipWithIndex().map(lambda k_v: (k_v[1], k_v[0]))
+A = A.cache()
+number_of_rows = A.count()
 
 # Calcualte A x A.T
 AxAt = sc.parallelize([])

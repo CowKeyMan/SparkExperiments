@@ -65,7 +65,14 @@ for i in range(number_of_rows):
         lambda l1, l2:
         [a + b for a, b in zip(l1, l2)]
     )
+    to_write = rdd_row.collect()
+    break
     AxAtxA = AxAtxA.union(rdd_row)
+
+
+with open('results.txt', 'w') as f:
+    for element in to_write[0][1]:
+        f.write(f'{element}\n')
 
 # checking
 # from checking import check

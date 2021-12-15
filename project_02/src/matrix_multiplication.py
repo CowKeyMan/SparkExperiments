@@ -38,7 +38,8 @@ A = A.cache()
 # Calcualte A x A.T
 AxAt = sc.parallelize([])
 A_iterator = A.values().toLocalIterator()
-for i, row in enumerate(A_iterator):
+for i in range(number_of_rows):
+    row = A.lookup(i)[0]
     rdd_row = A.map(
         lambda k_v: (
             k_v[0],
@@ -51,8 +52,8 @@ AxAt = AxAt.cache()
 
 # Calcualte A x A.T x A
 AxAtxA = sc.parallelize([])
-AxAt_iterator = AxAt.values().toLocalIterator()
-for i, row in enumerate(AxAt_iterator):
+for i in range(number_of_rows):
+    row = AxAt.lookup(i)[0]
     rdd_row = A.map(
         lambda k_v: (
             k_v[0],

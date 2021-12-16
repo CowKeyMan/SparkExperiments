@@ -42,6 +42,7 @@ for i in range(number_of_rows):
     )
     rdd_row = pair_rdd_to_tuple(i, rdd_row)
     rows.append(rdd_row)
+    break
 AxAt = sc.union(rows).cache()
 
 # Calcualte A x A.T x A

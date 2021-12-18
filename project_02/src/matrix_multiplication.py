@@ -3,7 +3,7 @@ from pyspark.sql import SparkSession
 
 spark = SparkSession.builder.appName("danicau").getOrCreate()
 dataset = 'random_matrix.txt'
-# dataset = 'simple_matrix.txt'
+dataset = 'simple_matrix.txt'
 sc = spark.sparkContext
 
 
@@ -29,46 +29,66 @@ A = A.zipWithIndex().map(lambda k_v: (k_v[1], k_v[0]))
 A = A.cache()
 number_of_rows = A.count()
 
+AxAt = A.flatMap(
+    lambda k_v: [((k_v[0], i), k_v[1]) for i in range(number_of_rows)]
+)
+AxAt2 = AxAt.map(lambda k_v: ((k_v[0][1], k_v[0][0]), k_v[1]))
+AxAt = sc.union([AxAt, AxAt2])
+AxAt = AxAt.reduceByKey(lambda A, B: sum([a * b for a, b in zip(A, B)]))
+
+
+
+
+
+AxAt = AxAt.map(lambda k_v: (k_v[0][0], [(k_v[1], k_v[0][1])]))
+AxAt = AxAt.reduceByKey(lambda a, b: a + b)
+AxAt = AxAt.map(lambda a: [
+    elem[0] for elem in sorted(a[1], key=lambda x: x[1])
+])
+
+print(AxAt.collect())
+
 # Calcualte A x A.T
-AxAt = sc.parallelize([])
-rows = []
-for i in range(number_of_rows):
-    row = A.lookup(i)[0]
-    rdd_row = A.map(
-        lambda k_v: (
-            k_v[0],
-            sum([element * row[i] for i, element in enumerate(k_v[1])])
-        )
-    )
-    rdd_row = pair_rdd_to_tuple(i, rdd_row)
-    rows.append(rdd_row)
-    break
-AxAt = sc.union(rows).cache()
+# AxAt = sc.parallelize([])
+# rows = []
+# for i in range(number_of_rows):
+#     row = A.lookup(i)[0]
+#     rdd_row = A.map(
+#         lambda k_v: (
+#             k_v[0],
+#             sum([element * row[i] for i, element in enumerate(k_v[1])])
+#         )
+#     )
+#     rdd_row = pair_rdd_to_tuple(i, rdd_row)
+#     rows.append(rdd_row)
+#     break
+# AxAt = sc.union(rows).cache()
 
-# Calcualte A x A.T x A
-AxAtxA = sc.parallelize([])
-for i in range(number_of_rows):
-    row = AxAt.lookup(i)[0]
-    rdd_row = A.map(
-        lambda k_v: (
-            k_v[0],
-            [element * row[k_v[0]] for element in k_v[1]]
-        )
-    )
-    rdd_row = pair_rdd_to_same_key(i, rdd_row)
-    rdd_row = rdd_row.reduceByKey(
-        lambda l1, l2:
-        [a + b for a, b in zip(l1, l2)]
-    )
-    to_write = rdd_row.collect()
-    break
-    AxAtxA = AxAtxA.union(rdd_row)
+# # Calcualte A x A.T x A
+# AxAtxA = sc.parallelize([])
+# for i in range(number_of_rows):
+#     row = AxAt.lookup(i)[0]
+#     rdd_row = A.map(
+#         lambda k_v: (
+#             k_v[0],
+#             [element * row[k_v[0]] for element in k_v[1]]
+#         )
+#     )
+#     rdd_row = pair_rdd_to_same_key(i, rdd_row)
+#     rdd_row = rdd_row.reduceByKey(
+#         lambda l1, l2:
+#         [a + b for a, b in zip(l1, l2)]
+#     )
+#     to_write = rdd_row.collect()
+#     break
+#     AxAtxA = AxAtxA.union(rdd_row)
 
 
-with open('results.txt', 'w') as f:
-    for element in to_write[0][1]:
-        f.write(f'{element}\n')
+# with open('results.txt', 'w') as f:
+#     for element in to_write[0][1]:
+#         f.write(f'{element}\n')
 
-# checking
-# from checking import check
+# # checking
+from checking import check
 # check(dataset, AxAtxA.values().collect())
+check(dataset, AxAt.values().collect())

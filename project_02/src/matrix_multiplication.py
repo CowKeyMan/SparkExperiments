@@ -44,25 +44,18 @@ A = A.cache()
 number_of_rows = A.count()
 
 # Calcualte A x A.T
-AxAt = sc.parallelize([])
-rows = []
-for i in range(number_of_rows):
-    row = A.lookup(i)[0]
-    rdd_row = A.map(
-        lambda k_v: (
-            k_v[0],
-            sum([element * row[i] for i, element in enumerate(k_v[1])])
-        )
-    )
-    rdd_row = pair_rdd_to_tuple(i, rdd_row)
-    rows.append(rdd_row)
-    break
-AxAt = sc.union(rows).cache()
-
-# Calcualte A x A.T x A and write to file
 with open('results.txt', 'w') as f:
     for i in range(number_of_rows):
-        row = AxAt.lookup(i)[0]
+        row = A.lookup(i)[0]
+        rdd_row = A.map(
+            lambda k_v: (
+                k_v[0],
+                sum([element * row[i] for i, element in enumerate(k_v[1])])
+            )
+        )
+        row = sorted(rdd_row.collect(), key=lambda x: x[0])
+        # calculate A x A.T x A
+        row = [element[1] for element in row]
         rdd_row = A.map(
             lambda k_v: (
                 k_v[0],
@@ -73,12 +66,11 @@ with open('results.txt', 'w') as f:
             lambda l1, l2: (i, [a + b for a, b in zip(l1[1], l2[1])])
         )
         # write row by row
-        # f.write(f'{" ".join([str(elem) for elem in rdd_row[1]])}\n')
+        f.write(f'{" ".join([str(elem) for elem in rdd_row[1]])}\n')
         # write each element to its own line
-        f.write("\n".join([str(elem) for elem in rdd_row[1]]) + '\n')
-        break
+        # f.write("\n".join([str(elem) for elem in rdd_row[1]]) + '\n')
 
 
 # checking
-# from checking import check, file_to_matrix
-# check(dataset, file_to_matrix('results.txt'))
+from checking import check, file_to_matrix
+check(dataset, file_to_matrix('results.txt'))

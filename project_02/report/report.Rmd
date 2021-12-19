@@ -1,0 +1,77 @@
+---
+title: "Distributed Data Infrastructures - Project 2"
+author: "Daniel Cauchi (015544014)"
+output: pdf_document
+---
+
+This document will explain how the problem of multiplying $AA^TA$ was handled, the given results and the approaches which were attempted.
+
+# Full matrix multiplication
+
+To present the given solution, I will split it into steps, each further divided into further subseps. The first of these steps is the pre processing:
+
+## The method
+
+#. Load the data text file as an RDD
+#. Set RDD A to represent the matrix A by turning each line int he file into a list of rows
+#. Using zipWithIndex and reversing the order, we transform into a pair of *(row_index, array with floats)*
+
+An example of a matrix A is shown in Figure \ref{fig:A}
+
+\begin{figure}
+  \centering
+  \includegraphics{images/A.png}
+  \caption{Original matrix A. For this example, it has 3 rows}
+  \label{fig:A}
+\end{figure}
+
+Next, we calculate $AA^T$
+
+#. for each row a in $A$ at index *i*:
+
+    a. Calclate the dot product of a by every other row in $A$. The resulting column is the *i*th row for matrix $AA^T$
+
+#. Union all the resulting rows
+
+In order to do step 1, we need to put each row on the driver. This is done by using the lookup function. The lookup is done on the row keys, that is, their index.
+
+Continuing on the example of Figure \ref{fig:A}, Figure \ref{fig:AAT} shows the previously discussed steps to compute $AA^T$
+
+\begin{figure}
+  \centering
+  \includegraphics{images/AAT.png}
+  \caption{Computing $AA^T$}
+  \label{fig:AAT}
+\end{figure}
+
+Lastly, we can calculate $AA^TA$
+
+#. Our rows in the $AA^T$ matrix are keyed with the row number. Thus, we can look these up by their keys. Thus, for each row *r* in $AA^TA$:
+
+    #. Multiply row i of A by element *r[i]* using map
+    #. Reduce the resulting matrix to a single row by summing all the rows together
+    #. Union all the rows together sequentially (or in my case, after each reduce, write to file)
+
+## An optimization
+
+To optimize, we can avoid the union in the second step. What we can do is to get the resulting row from step 2 and then calculate the row for $AA^TA$ immediately. This allows us to avoid storing the matrix $AA^T$. We can then write the resulting row of $AA^TA$ directly to disk.
+
+## Advantages of this approach
+
+The advantage with this approach is that memory usage is minimal, as we are only storing $A$ as an RDD and one of its rows.
+
+## The issues with full matrix multiplication
+
+This approach is slow, terribly so. It takes ~8 minutes on the 1000x1000 matrix when using 5 cores.
+
+# Single row calculation
+
+The requirements of the report need the full $AA^TA$ matrix to be computed, however the first row to be provided in the results. As such, if we use the optimization from the first approach, we can calculate just the first row and output only that to our *results.txt* file, then immediately break our loop. This result is provided alongside the script file within the zipped folder.
+
+# Another approach - Distributing vector dot products
+
+Another approach I attempted was to distribute the vector dot products. This was done by replicating each row by the number of columns using a flatmap, then unionizing 2 copies of A to calculate $AA^T$. This same procedure is then used to calculate $AA^TA$.
+
+## The issue with distributing vector dot products
+
+This approach uses too much memory since it takes how much memory was used initially squared. As such it is not very feasible.
